@@ -1,34 +1,18 @@
 import { useMemo, useState } from "react";
-import { checkHealth, predictImage } from "./api";
-import type { HealthResponse, PredictResponse } from "./types";
+import { predictImage } from "./api";
+import type { PredictResponse } from "./types";
 
 const DEFAULT_API = "http://127.0.0.1:8000";
 
 export default function App() {
-  const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API);
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [healthError, setHealthError] = useState("");
+  const [apiBaseUrl, _] = useState(DEFAULT_API);
   const [file, setFile] = useState<File | null>(null);
   const [predictResult, setPredictResult] = useState<PredictResponse | null>(null);
   const [predictError, setPredictError] = useState("");
-  const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
 
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
 
-  async function onHealthCheck() {
-    setHealthError("");
-    setHealth(null);
-    setIsCheckingHealth(true);
-    try {
-      const data = await checkHealth(apiBaseUrl);
-      setHealth(data);
-    } catch (error) {
-      setHealthError(error instanceof Error ? error.message : "Unknown health check error");
-    } finally {
-      setIsCheckingHealth(false);
-    }
-  }
 
   async function onPredict() {
     if (!file) {
@@ -55,30 +39,7 @@ export default function App() {
       <p className="subtext"><b>Upload an image and get the top 3 predictions for the image.</b></p>
       <p className="subtext"><u>The model is trained on the Oxford-IIIT Pet dataset.</u></p>
       <p className="subtext"><u>Upload only images of pets.</u></p>
-
-
-      {/* <section className="card">
-        <h2>API Settings</h2>
-        <label htmlFor="api-url">Base URL</label>
-        <input
-          id="api-url"
-          type="text"
-          value={apiBaseUrl}
-          onChange={(event) => setApiBaseUrl(event.target.value.trim())}
-          placeholder="http://127.0.0.1:8000"
-        />
-        <button onClick={onHealthCheck} disabled={isCheckingHealth}>
-          {isCheckingHealth ? "Checking..." : "Check /health"}
-        </button>
-        {health && (
-          <div className="success">
-            <div>Status: {health.status}</div>
-            <div>Model Loaded: {health.model_loaded ? "Yes" : "No"}</div>
-          </div>
-        )}
-        {healthError && <div className="error">{healthError}</div>}
-      </section> */}
-
+      
       <section className="card">
         <h2>Prediction</h2>
         <input
