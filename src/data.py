@@ -64,8 +64,7 @@ def _split_indices(total_size: int, train_split: float, val_split: float, seed: 
     return train_idx, val_idx, test_idx
 
 
-def _build_subset(dataset: datasets.OxfordIIITPet, indices: np.ndarray, transform: transforms.Compose) -> Subset:
-    dataset.transform = transform
+def _build_subset(dataset: datasets.OxfordIIITPet, indices: np.ndarray) -> Subset:
     return Subset(dataset, indices.tolist())
 
 
@@ -91,7 +90,7 @@ def create_dataloaders(config: dict, seed: int) -> DatasetBundle:
         split="trainval",
         target_types="category",
         download=True,
-        transform=None,
+        transform=train_tfms,
     )
 
     class_names = list(raw_ds.classes)
@@ -102,24 +101,24 @@ def create_dataloaders(config: dict, seed: int) -> DatasetBundle:
         seed=seed,
     )
 
-    train_ds = _build_subset(raw_ds, train_idx, train_tfms)
+    train_ds = _build_subset(raw_ds, train_idx)
     # Re-load for val/test to keep transforms independent.
     raw_val = datasets.OxfordIIITPet(
         root=str(data_root),
         split="trainval",
         target_types="category",
         download=True,
-        transform=None,
+        transform=eval_tfms,
     )
     raw_test = datasets.OxfordIIITPet(
         root=str(data_root),
         split="trainval",
         target_types="category",
         download=True,
-        transform=None,
+        transform=eval_tfms,
     )
-    val_ds = _build_subset(raw_val, val_idx, eval_tfms)
-    test_ds = _build_subset(raw_test, test_idx, eval_tfms)
+    val_ds = _build_subset(raw_val, val_idx)
+    test_ds = _build_subset(raw_test, test_idx)
 
     train_labels = _extract_labels(raw_ds, train_idx)
     class_counts = dict(Counter(train_labels))
@@ -131,9 +130,10 @@ def create_dataloaders(config: dict, seed: int) -> DatasetBundle:
         weights.append(max_count / count)
     class_weights = torch.tensor(weights, dtype=torch.float32)
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+    pin_memory = torch.cuda.is_available()
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     return DatasetBundle(
         train_loader=train_loader,
