@@ -5,15 +5,25 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.inference import InferenceEngine
 from src.utils import env_or_default
 
 app = FastAPI(title="CV Assessment Inference API", version="1.0.0")
 
-CHECKPOINT_PATH = env_or_default("CHECKPOINT_PATH", "models/strong_best.pt")
+CHECKPOINT_PATH = env_or_default("CHECKPOINT_PATH", "artifacts/models/strong_best.pt")
 IMAGE_SIZE = int(env_or_default("IMAGE_SIZE", "224"))
 TOP_K = int(env_or_default("TOP_K", "3"))
+ALLOWED_ORIGINS = env_or_default("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in ALLOWED_ORIGINS.split(",") if origin.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if Path(CHECKPOINT_PATH).exists():
     ENGINE = InferenceEngine(checkpoint_path=CHECKPOINT_PATH, image_size=IMAGE_SIZE, top_k=TOP_K)
